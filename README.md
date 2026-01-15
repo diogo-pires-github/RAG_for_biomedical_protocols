@@ -1,71 +1,206 @@
-# RAG Assistant for Anatomical Pathology Labs
+# RAG Assistant for Anatomical Pathology Laboratories
 
-## Project Overview
-This repository implements a Retrieval-Augmented Generation (RAG) pipeline for Anatomical Pathology (AP) laboratory protocols, as introduced in the accompanying research article. The goal is to turn static AP protocol documents into a dynamic, question-answering assistant that helps lab technicians quickly find accurate, context-grounded answers to protocol-related queries. In AP labs, up to 70% of medical decisions depend on lab diagnoses, yet protocols are often stored in cumbersome PDFs or binders. This project addresses that gap by using RAG to combine a Large Language Model (LLM) with a curated protocol knowledge base, enabling precise, reliable answers drawn from official lab procedures.
+This repository contains the reference implementation of a **Retrieval-Augmented Generation (RAG) assistant for Anatomical Pathology (AP) laboratories**, as presented in the accompanying research paper:
 
-## Key Features:
+**Pires, D., Perezhohin, Y., & Castelli, M. (2025).**
+*Retrieval-Augmented Generation Assistant for Anatomical Pathology Laboratories.*
+Emerging Science Journal, 9(6).
+**DOI:** [https://doi.org/10.28991/ESJ-2025-09-06-013](https://doi.org/10.28991/ESJ-2025-09-06-013)
 
-**AP Protocols Knowledge Base:** A custom dataset of 99 AP lab protocols (from a Portuguese healthcare institution) and 323 Q&A pairs for evaluation, available on Hugging Face (see Dataset below). This forms the knowledge source that the RAG assistant retrieves from.
+---
 
-**Retrieval-Augmented QA:** The system retrieves relevant protocol chunks and feeds them to an LLM, which generates answers grounded in the retrieved text. This ensures answers remain faithful to official procedures.
+## Motivation
 
-**Multiple Retrieval Strategies:** We implement three retrieval methods – dense embedding-based search, a reranking retrieval approach, and hybrid search (combining semantic and keyword-based retrieval) – to evaluate which best suits AP protocols.
+In Anatomical Pathology laboratories, **up to 70% of medical decisions depend on laboratory diagnoses**, yet technicians often rely on fragmented, outdated, and hard-to-search documentation. This creates inefficiencies and increases the risk of procedural errors.
 
-**Evaluation with RAGAS:** The quality of answers is measured with the RAGAS framework, using metrics like Answer Relevance, Faithfulness, and Context Recall. The pipeline can reproduce the experiments from the paper, demonstrating how different chunking strategies, retrieval modes, and embedding models impact these metrics.
+This project addresses that challenge by:
 
-## Repo structure
+* Grounding a **Large Language Model (LLM)** in official laboratory protocols
+* Using **Retrieval-Augmented Generation (RAG)** to reduce hallucinations
+* Providing **traceable, protocol-backed answers** to technician queries
+
+---
+
+## Key Features
+
+* **Anatomical Pathology Knowledge Base**
+
+  * 99 real AP laboratory protocols from a Portuguese healthcare institution
+  * 323 protocol-derived question–answer pairs for systematic evaluation
+  * Publicly available in Hugging Face Datasets format
+
+* **Retrieval-Augmented Question Answering**
+
+  * Retrieves relevant protocol chunks and conditions the LLM on them
+  * Ensures answers are faithful to official laboratory procedures
+
+* **Multiple Retrieval Strategies**
+
+  * Dense semantic retrieval
+  * Reranking-based retrieval
+  * Hybrid search (semantic + keyword / BM25)
+
+* **Reproducible Evaluation Pipeline**
+
+  * Uses the **RAGAS framework** to evaluate:
+
+    * Answer Relevance
+    * Faithfulness (hallucination control)
+    * Context Recall
+  * Includes deterministic **Top-k retrieval evaluation**
+
+* **Interactive Interface**
+
+  * Streamlit-based chat application for real-time querying of protocols
+
+---
+
+## Repository Structure
+
 ```
 ├── data/
 │   ├── AP_protocols/                     # Corpus in HuggingFace Datasets format
-|   |   ├── data-00000-of-00001.arrow
-|   |   ├── dataset_info.json
+│   │   ├── data-00000-of-00001.arrow
+│   │   ├── dataset_info.json
 │   │   └── state.json
 │   ├── processed/
-│   │   └── parsed_documents.pkl          # Processed corpus (list format)
+│   │   └── parsed_documents.pkl          # Preprocessed corpus (recommended entry point)
+│
 ├── evaluation/
-│   └── QA_test_dataset.csv               # Evaluation QA pairs
-├── 00_load_from_HF.py                    # For HuggingFace format
-├── 01_chunking.py                        # Create chunks and store them in a vector store
-├── 02_retrieval.py                       # Retrieves contexts and answers the test QA
-├── 03_evaluation.py                      # Evaluates the generated answers using RAGAS
-├── 04_biomedical_experiment.py           # RAG pipeline + evaluation using biomedical-specific model
-├── 05_top_k_evaluation.py                # Top-k evaluation
+│   └── QA_test_dataset.csv               # Ground-truth QA pairs
+│
+├── 00_load_from_HF.py                    # Load dataset directly from Hugging Face
+├── 01_chunking.py                        # Chunking + vector store creation
+├── 02_retrieval.py                       # Context retrieval + answer generation
+├── 03_evaluation.py                      # RAGAS-based evaluation
+├── 04_biomedical_experiment.py           # Biomedical embedding experiment
+├── 05_top_k_evaluation.py                # Top-k retrieval evaluation
+│
 ├── app.py                                # Streamlit chat application
-├── models.py                             # LLM and embedding models
-└── requirements.txt
+├── models.py                             # LLM and embedding model definitions
+├── requirements.txt
+└── README.md
 ```
+
+---
+
 ## Installation
-```
+
+```bash
 git clone https://github.com/<your-username>/<your-repo>.git
 cd <your-repo>
 pip install -r requirements.txt
 ```
-Python 3.10+ recommended. GPU is advised for LLM inference.
+
+**Requirements**
+
+* Python **3.10+**
+* GPU strongly recommended for local LLM inference (tested with Llama 3.1 8B)
+* Ollama installed for local model serving
+
+---
 
 ## Usage Guide
-#### 1. Prepare data
-   - Option A: Use the `parsed_documents.pkl` data file and start with `01_chunking.py`. (recommended)
-   - Option B: Use the data directly from Hugging Face and start with `00_load_from_HF.py`.
-#### 2. Run pipeline
-```
+
+### 1️. Data Preparation
+
+Choose **one** of the following:
+
+* **Option A (Recommended)**
+  Use the preprocessed corpus:
+
+  ```bash
+  python 01_chunking.py
+  ```
+
+* **Option B**
+  Load the dataset directly from Hugging Face:
+
+  ```bash
+  python 00_load_from_HF.py
+  ```
+
+---
+
+### 2️. Run the RAG Pipeline
+
+```bash
 python 01_chunking.py
 python 02_retrieval.py
 python 03_evaluation.py
 ```
-#### 3. Biomedical embeddings (optional)
+
+This will:
+
+* Build the vector store
+* Retrieve contexts for all test questions
+* Generate answers using the LLM
+* Evaluate results using RAGAS metrics
+
+---
+
+### 3️. Biomedical Embedding Experiment (Optional)
+
+Reproduce the paper’s biomedical embedding experiment:
+
+```bash
+python 04_biomedical_experiment.py
 ```
-python biomedical_experiment.py
+
+---
+
+### 4️. Top-k Retrieval Evaluation (Optional)
+
+```bash
+python 05_top_k_evaluation.py
 ```
-#### 4. Streamlit app (optional)
-```
+
+---
+
+### 5️. Run the Interactive Chat App (Optional)
+
+```bash
 streamlit run app.py
 ```
 
-## References
-Pires, D., Perezhohin, Y., & Castelli, M. (2025). *RAG Assistant for Anatomical Pathology Laboratories*.
-Preprint in Artificial Intelligence in Medicine.
+This launches a local web interface for querying AP protocols in natural language.
 
-**Dataset:** [AP_Lab_Protocols](https://huggingface.co/datasets/diogofmp/AP_Lab_Protocols) on Hugging Face
+---
+
+## Reproducibility
+
+This repository allows full reproduction of the experiments reported in the paper, including:
+
+* Chunking strategy comparisons
+* Retrieval method comparisons
+* General vs. biomedical embedding models
+* RAGAS and Top-k evaluation metrics
+
+All parameters and configurations are explicitly defined in the code.
+
+---
+
+## Dataset
+
+* **AP Laboratory Protocols Dataset**
+  👉 [https://huggingface.co/datasets/diogofmp/AP_Lab_Protocols](https://huggingface.co/datasets/diogofmp/AP_Lab_Protocols)
 
 
+## Reference
+
+If you use this repository, please cite the paper:
+
+```bibtex
+@article{pires2025rag_ap,
+  title   = {Retrieval-Augmented Generation Assistant for Anatomical Pathology Laboratories},
+  author  = {Pires, Diogo and Perezhohin, Yuriy and Castelli, Mauro},
+  journal = {Emerging Science Journal},
+  volume  = {9},
+  number  = {6},
+  year    = {2025},
+  doi     = {10.28991/ESJ-2025-09-06-013}
+}
+```
+
+📄 **Paper link:** [https://doi.org/10.28991/ESJ-2025-09-06-013](https://doi.org/10.28991/ESJ-2025-09-06-013)
 
